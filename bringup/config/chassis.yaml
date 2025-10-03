@@ -1,10 +1,10 @@
 chassis_driver_node:
   ros__parameters:
-    serial_port: "/dev/ttySTM"
+    serial_port: "/dev/ttyCNT"
     wheel_radius : 0.1125
     tread : 0.25
-    linear_max_vel: 0.5 # 最大並進速度[m/s]
-    angular_max_vel: 180.0 # 最大回転速度[deg/s]
+    linear_max_vel: 1.0 # 最大並進速度[m/s]
+    angular_max_vel: 45.0 # 最大回転速度[deg/s]
     pole_pairs: 23
 
 teleop_twist_joy_node:
@@ -12,7 +12,7 @@ teleop_twist_joy_node:
     axis_linear:
       x: 1  # ボタンの割り当て
     scale_linear:
-      x: 0.2
+      x: 0.5
 
     axis_angular:
       yaw: 2  # ボタンの割り当て

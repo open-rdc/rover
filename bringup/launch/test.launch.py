@@ -10,24 +10,16 @@ def generate_launch_description():
         'launch', 'include'
     )
 
-    chassis_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([launch_include_path, '/chassis.launch.py'])
-    )
     description_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([launch_include_path, '/description.launch.py'])
     )
     imu_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([launch_include_path, '/adi_imu.launch.py'])
     )
-    robot_localization_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource([launch_include_path, '/robot_localization.launch.py'])
-    )
 
     launch_description = LaunchDescription()
 
-    launch_description.add_action(chassis_launch)
-    launch_description.add_action(description_launch)
-    launch_description.add_action(imu_launch)
-    launch_description.add_action(robot_localization_launch)
+    launch_description.add_entity(description_launch)
+    launch_description.add_entity(imu_launch)
 
     return launch_description

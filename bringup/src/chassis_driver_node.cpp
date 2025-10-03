@@ -34,8 +34,8 @@ pole_pairs(get_parameter("pole_pairs").as_int())
     init_serial();
     last_joy_vel_time = this->now();
 
-    RCLCPP_INFO(this->get_logger(), "車輪半径:%f  トレッド:%f", wheel_radius, tread);
-    RCLCPP_INFO(this->get_logger(), "最大並進速度:%f  最大回転速度:%f", linear_max_vel, angular_max_vel);
+    RCLCPP_INFO(this->get_logger(), "Wheel Radius:%f  Tread:%f", wheel_radius, tread);
+    RCLCPP_INFO(this->get_logger(), "Max Linear Velocity:%f  Max Angular Velocity:%f", linear_max_vel, angular_max_vel);
 }
 
 ChassisDriver::~ChassisDriver() {
@@ -139,3 +139,18 @@ void ChassisDriver::send_data_to_serial(const int left_rpm, const int right_rpm)
 }
 
 }  // namespace chassis_driver
+
+int main(int argc, char** argv)
+{
+  rclcpp::init(argc, argv);
+
+  rclcpp::NodeOptions options;
+  options.allow_undeclared_parameters(true);
+  options.automatically_declare_parameters_from_overrides(true);
+
+  auto chassis_node = std::make_shared<chassis_driver::ChassisDriver>(options);
+
+  rclcpp::spin(chassis_node);
+  rclcpp::shutdown();
+  return 0;
+}

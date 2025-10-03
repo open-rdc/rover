@@ -12,7 +12,7 @@ def generate_launch_description():
     # 手動制御ノードの作成
     execute_node = Node(
         package = 'bringup',
-        executable = 'executor',
+        executable = 'chassis_driver',
         parameters = [config_file_path],
         output='screen'
     )
