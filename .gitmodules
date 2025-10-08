@@ -1,3 +1,6 @@
 [submodule "ADI_IMU_TR_Driver_ROS2"]
 	path = ADI_IMU_TR_Driver_ROS2
 	url = https://github.com/technoroad/ADI_IMU_TR_Driver_ROS2
+[submodule "mapviz"]
+	path = mapviz
+	url = https://github.com/swri-robotics/mapviz

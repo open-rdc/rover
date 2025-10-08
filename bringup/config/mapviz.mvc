@@ -1,0 +1,42 @@
+capture_directory: "~"
+fixed_frame: utm
+target_frame: utm
+fix_orientation: false
+rotate_90: false
+enable_antialiasing: true
+show_displays: true
+show_status_bar: true
+show_capture_tools: true
+window_width: 1920
+window_height: 1016
+view_scale: 0.564473748
+offset_x: -55.0469894
+offset_y: -4.65194941
+use_latest_transforms: true
+background: "#a0a0a4"
+image_transport: raw
+displays:
+  - type: mapviz_plugins/tile_map
+    name: new display
+    config:
+      visible: true
+      collapsed: false
+      custom_sources:
+        - base_url: https://cyberjapandata.gsi.go.jp/xyz/seamlessphoto/{level}/{x}/{y}.jpg
+          max_zoom: 18
+          name: japan
+          type: wmts
+      bing_api_key: ""
+      source: japan
+  - type: mapviz_plugins/tf_frame
+    name: base_link tf frame
+    config:
+      visible: true
+      collapsed: false
+      frame: base_link
+      color: "#ff0000"
+      draw_style: arrows
+      position_tolerance: 0
+      buffer_size: 50
+      static_arrow_sizes: false
+      arrow_size: 25
