@@ -1,0 +1,16 @@
+# Global Planner Parameters
+global_planner_node:
+  ros__parameters:
+    mode: 'waypoint_recorder'  # 'waypoint_recorder' or 'path_planner'
+    waypoint_file: 'waypoints.csv'
+    joy_button_index: 0
+    waypoint_threshold: 2.0
+
+# Local Planner Parameters
+local_planner_node:
+  ros__parameters:
+    # linear_max_vel と angular_max_vel は chassis.yaml から取得
+    linear_gain: 1.0
+    angular_gain: 2.0
+    goal_tolerance: 0.1
+    control_frequency: 10.0
