@@ -31,8 +31,16 @@ pole_pairs(get_parameter("pole_pairs").as_int())
         std::bind(&ChassisDriver::_subscriber_callback_joy_vel, this, std::placeholders::_1)
     );
 
+    _publisher_odom = this->create_publisher<nav_msgs::msg::Odometry>("odom", _qos);
+
     init_serial();
     last_joy_vel_time = this->now();
+
+    // 100Hzで車輪速度を出力
+    _timer = this->create_wall_timer(
+        std::chrono::milliseconds(10),
+        std::bind(&ChassisDriver::_timer_callback, this)
+    );
 
     RCLCPP_INFO(this->get_logger(), "Wheel Radius:%f  Tread:%f", wheel_radius, tread);
     RCLCPP_INFO(this->get_logger(), "Max Linear Velocity:%f  Max Angular Velocity:%f", linear_max_vel, angular_max_vel);
@@ -82,9 +90,36 @@ void ChassisDriver::calculate_chassis(const geometry_msgs::msg::Twist::SharedPtr
     RCLCPP_INFO(this->get_logger(), "Sent left_erpm: %d, right_erpm: %d", left_erpm, right_erpm);
 }
 
+// タイマーコールバック
+void ChassisDriver::_timer_callback() {
+    read_wheel_erpms_from_serial();
+
+    // RCLCPP_INFO(this->get_logger(),
+    //             "Wheel speeds - Wheel1: %d, Wheel2: %d, Wheel3: %d, Wheel4: %d",
+    //             wheel_erpms[0], wheel_erpms[1], wheel_erpms[2], wheel_erpms[3]);
+
+    // ERPMからRPMに変換してから角速度に変換
+    const double left_vel = ((wheel_erpms[0] + wheel_erpms[1]) / 2.0) / pole_pairs * d_pi / 30.0;
+    const double right_vel = ((wheel_erpms[2] + wheel_erpms[3]) / 2.0) / pole_pairs * d_pi / 30.0;
+
+    auto odom_msg = nav_msgs::msg::Odometry();
+    odom_msg.header.stamp = this->now();
+    odom_msg.header.frame_id = "odom";
+    odom_msg.child_frame_id = "base_link";
+
+    odom_msg.twist.twist.linear.x = (left_vel + right_vel) * wheel_radius / 2.0;
+    odom_msg.twist.twist.linear.y = 0.0;
+    odom_msg.twist.twist.linear.z = 0.0;
+    odom_msg.twist.twist.angular.x = 0.0;
+    odom_msg.twist.twist.angular.y = 0.0;
+    odom_msg.twist.twist.angular.z = (right_vel - left_vel) * wheel_radius / tread;
+
+    _publisher_odom->publish(odom_msg);
+}
+
 /*シリアル通信*/
 void ChassisDriver::init_serial() {
-    serial_fd = open(serial_port.c_str(), O_WRONLY | O_NOCTTY);
+    serial_fd = open(serial_port.c_str(), O_RDWR | O_NOCTTY);
     if (serial_fd < 0) {
         RCLCPP_ERROR(this->get_logger(), "Failed to open %s", serial_port.c_str());
         return;
@@ -121,8 +156,8 @@ void ChassisDriver::send_data_to_serial(const int left_rpm, const int right_rpm)
     }
 
     uint8_t bytes[serial_byte_size];
-    int_to_bytes(bytes, left_rpm);
-    int_to_bytes(bytes + 4, right_rpm);
+    int_to_bytes(bytes, static_cast<int32_t>(left_rpm));
+    int_to_bytes(bytes + 4, static_cast<int32_t>(right_rpm));
     if(mode == Mode::cmd){
         bytes[8] = 0x01;
     } else if(mode == Mode::joy){
@@ -135,6 +170,24 @@ void ChassisDriver::send_data_to_serial(const int left_rpm, const int right_rpm)
     ssize_t written = write(serial_fd, bytes, serial_byte_size);
     if (written != serial_byte_size) {
         RCLCPP_WARN(this->get_logger(), "Failed to write complete data to serial");
+    }
+}
+
+void ChassisDriver::read_wheel_erpms_from_serial() {
+    if (serial_fd < 0) {
+        RCLCPP_WARN(this->get_logger(), "Serial port not initialized");
+        return;
+    }
+
+    uint8_t buffer[serial_byte_size];
+    ssize_t bytes_read = read(serial_fd, buffer, serial_byte_size);
+
+    if (bytes_read == serial_byte_size) {
+        for (int i = 0; i < 4; i++) {
+            wheel_erpms[i] = bytes_to_int(buffer + i*4);
+        }
+    } else if (bytes_read > 0) {
+        RCLCPP_WARN(this->get_logger(), "Incomplete data received: %ld bytes", bytes_read);
     }
 }
 

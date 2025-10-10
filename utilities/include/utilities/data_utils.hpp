@@ -4,10 +4,10 @@
 
 /*INT*/
 union Int_bytes {
-    int int_value;
+    int32_t int_value;
     uint8_t bytes[4];
 };
-inline int bytes_to_int(uint8_t *value) {
+inline int32_t bytes_to_int(uint8_t *value) {
     Int_bytes tmp;
     tmp.bytes[0]=value[0];
     tmp.bytes[1]=value[1];
@@ -15,7 +15,7 @@ inline int bytes_to_int(uint8_t *value) {
     tmp.bytes[3]=value[3];
     return tmp.int_value;
 }
-inline void int_to_bytes(uint8_t *value,int int_value){
+inline void int_to_bytes(uint8_t *value,int32_t int_value){
     Int_bytes tmp;
     tmp.int_value=int_value;
     value[0]=tmp.bytes[0];

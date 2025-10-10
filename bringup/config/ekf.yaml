@@ -11,6 +11,13 @@ ekf_filter_node_odom:
     base_link_frame: base_link
     world_frame: odom
 
+    odom0: /odom
+    odom0_config: [false, false, false,
+                  false, false, false,
+                  true,  true,  false,
+                  false, false, true,
+                  false, false, false]
+
     imu0: /imu/data
     imu0_config:    [false, false, false,
                       false, false, true,
@@ -39,23 +46,30 @@ ekf_filter_node_map:
     world_frame: odom
 
     # GPS位置データを使用（UTM座標系）
-    odom0: odometry/gps
-    odom0_config: [true,  true,  false,
+    odom0: /odom
+    odom0_config: [false, false, false,
+                  false, false, false,
+                  true,  true,  false,
+                  false, false, true,
+                  false, false, false]
+
+    odom1: /odometry/gps
+    odom1_config: [true,  true,  false,
                   false, false, false,
                   false, false, false,
                   false, false, false,
                   false, false, false]
 
-    imu0: imu/data
-    # imu0_config:    [false, false, false,
-    #                   false, false, true,
-    #                   true, true, false,
-    #                   true, true, true,
-    #                   false, false, true]
+    imu0: /imu/data
     imu0_config:    [false, false, false,
                       false, false, true,
-                      false, false, false,  # IMUからは速度情報を使用しない
-                      false, false, false,
-                      false, false, false]
+                      true, true, false,
+                      true, true, true,
+                      false, false, true]
+    # imu0_config:    [false, false, false,
+    #                   false, false, true,
+    #                   false, false, false,  # IMUからは速度情報を使用しない
+    #                   false, false, false,
+    #                   false, false, false]
 
     use_control: false

@@ -9,7 +9,8 @@ chassis_driver_node:
     serial_port: "/dev/ttyCNT"
     wheel_radius : 0.1125
     tread : 0.25
-    pole_pairs: 23
+    # pole_pairs: 23
+    pole_pairs: 15
 
 teleop_twist_joy_node:
   ros__parameters:
