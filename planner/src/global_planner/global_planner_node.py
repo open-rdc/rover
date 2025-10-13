@@ -23,9 +23,21 @@ class GlobalPlannerNode(Node):
 
         # パラメータの取得
         self.mode = self.get_parameter('mode').get_parameter_value().string_value
-        self.waypoint_file = self.get_parameter('waypoint_file').get_parameter_value().string_value
+        waypoint_filename = self.get_parameter('waypoint_file').get_parameter_value().string_value
         self.joy_button_index = self.get_parameter('joy_button_index').get_parameter_value().integer_value
         self.waypoint_threshold = self.get_parameter('waypoint_threshold').get_parameter_value().double_value
+
+        # ウェイポイントファイルのフルパスを構築（このパッケージのソースディレクトリのconfigから取得）
+        try:
+            # 現在のファイルからパッケージのルートディレクトリを取得
+            current_file_path = os.path.abspath(__file__)
+            # global_planner_node.py -> src/global_planner/global_planner_node.py -> src -> package_root
+            package_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))
+            self.waypoint_file = os.path.join(package_root, 'config', waypoint_filename)
+            self.get_logger().info(f"Using waypoint file: {self.waypoint_file}")
+        except Exception as e:
+            self.get_logger().warn(f"Could not determine package path, using relative path: {e}")
+            self.waypoint_file = os.path.join('config', waypoint_filename)
 
         # TFバッファとリスナーの初期化
         self.tf_buffer = tf2_ros.Buffer()
@@ -112,6 +124,12 @@ class GlobalPlannerNode(Node):
 
     def save_waypoint_to_csv(self, x, y, yaw):
         """ウェイポイントをCSVファイルに保存"""
+        # ディレクトリが存在しない場合は作成
+        waypoint_dir = os.path.dirname(self.waypoint_file)
+        if not os.path.exists(waypoint_dir):
+            os.makedirs(waypoint_dir)
+            self.get_logger().info(f"Created directory: {waypoint_dir}")
+
         file_exists = os.path.isfile(self.waypoint_file)
 
         with open(self.waypoint_file, 'a', newline='') as csvfile:

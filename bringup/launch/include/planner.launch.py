@@ -27,7 +27,6 @@ def generate_launch_description():
     local_planner_node = Node(
         package='planner',
         executable='local_planner_node',
-        name='local_planner_node',
         parameters=[planner_config_file_path, chassis_config_file_path],
         output='screen'
     )

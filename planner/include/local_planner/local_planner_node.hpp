@@ -8,9 +8,7 @@
 #include <tf2_ros/buffer.hpp>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <tf2/utils.h>
-#include <chrono>
 #include <memory>
-#include <cmath>
 
 namespace local_planner
 {
@@ -47,7 +45,6 @@ private:
     geometry_msgs::msg::Twist calculate_cmd_vel();
     bool get_robot_pose(geometry_msgs::msg::PoseStamped& robot_pose);
     double calculate_distance(const geometry_msgs::msg::Point& p1, const geometry_msgs::msg::Point& p2);
-    double calculate_angle_difference(double target_yaw, double current_yaw);
     double normalize_angle(double angle);
 };
 

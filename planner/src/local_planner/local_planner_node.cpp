@@ -1,6 +1,10 @@
 #include "local_planner/local_planner_node.hpp"
+#include <cmath>
+#include <chrono>
+#include "utilities/utils.hpp"
 
 using namespace std::chrono_literals;
+using namespace utils;
 
 namespace local_planner
 {
@@ -99,18 +103,18 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
     double current_yaw = tf2::getYaw(q_current);
 
     // Calculate angle difference
-    double angle_diff = calculate_angle_difference(target_yaw, current_yaw);
+    double angle_diff = normalize_angle(target_yaw - current_yaw);
 
     // Proportional control
     double linear_vel = linear_gain_ * distance;
     double angular_vel = angular_gain_ * angle_diff;
 
     // Apply velocity limits
-    linear_vel = std::max(-linear_max_vel_, std::min(linear_max_vel_, linear_vel));
-    angular_vel = std::max(-angular_max_vel_, std::min(angular_max_vel_, angular_vel));
+    linear_vel = constrain(linear_vel, -linear_max_vel_, linear_max_vel_);
+    angular_vel = constrain(angular_vel, -angular_max_vel_, angular_max_vel_);
 
     // If angle difference is large, prioritize rotation over translation
-    if (std::abs(angle_diff) > M_PI / 4) {
+    if (std::abs(angle_diff) > d_pi / 4) {
         linear_vel *= 0.5;  // Reduce linear velocity when turning
     }
 
@@ -150,16 +154,11 @@ double LocalPlanner::calculate_distance(const geometry_msgs::msg::Point& p1, con
     return std::sqrt(dx * dx + dy * dy);
 }
 
-double LocalPlanner::calculate_angle_difference(double target_yaw, double current_yaw)
-{
-    double angle_diff = target_yaw - current_yaw;
-    return normalize_angle(angle_diff);
-}
 
 double LocalPlanner::normalize_angle(double angle)
 {
-    while (angle > M_PI) angle -= 2.0 * M_PI;
-    while (angle < -M_PI) angle += 2.0 * M_PI;
+    while (angle > d_pi) angle -= 2.0 * d_pi;
+    while (angle < -d_pi) angle += 2.0 * d_pi;
     return angle;
 }
 

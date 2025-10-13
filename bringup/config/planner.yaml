@@ -2,7 +2,7 @@
 global_planner_node:
   ros__parameters:
     mode: 'waypoint_recorder'  # 'waypoint_recorder' or 'path_planner'
-    waypoint_file: 'waypoints.csv'
+    waypoint_file: '251010.csv'
     joy_button_index: 0
     waypoint_threshold: 2.0
 
