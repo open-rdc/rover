@@ -10,10 +10,10 @@ def generate_launch_description():
         'navsat.yaml'
     )
 
-    # nmea_serial_driverノードの作成
+    # nmea_tcpclient_driverノードの作成
     nmea_serial_driver_node = Node(
         package='nmea_navsat_driver',
-        executable='nmea_serial_driver',
+        executable='nmea_tcpclient_driver',
         parameters=[config_file_path],
         remappings=[('fix', 'gps/fix')],
         output='screen'

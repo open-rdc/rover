@@ -1,8 +1,12 @@
 /**:
   ros__parameters:
-    # nmea_serial_driver parameters
-    port: "/dev/rfcomm0"
-    baud: 230400
+    # nmea_tcpclient_driver parameters
+    # port: "/dev/rfcomm0"
+    # port: "tcp://localhost:1111"
+    # ip: "127.0.0.1"
+    ip: "localhost"
+    port: 1111
+    # baud: 230400
     frame_id : "base_link"
     # useRMC : true
 
