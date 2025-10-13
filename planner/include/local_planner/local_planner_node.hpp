@@ -2,7 +2,8 @@
 #define LOCAL_PLANNER__LOCAL_PLANNER_NODE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
+// #include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/vector3.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <tf2_ros/transform_listener.hpp>
 #include <tf2_ros/buffer.hpp>
@@ -20,11 +21,11 @@ public:
     LocalPlanner(const std::string& name_space, const rclcpp::NodeOptions& options);
 
 private:
-    void target_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
+    void target_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr msg);
     void control_timer_callback();
 
     // ROS interfaces
-    rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr target_pose_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::Vector3>::SharedPtr target_pose_sub_;
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
     rclcpp::TimerBase::SharedPtr control_timer_;
 
@@ -33,7 +34,7 @@ private:
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
 
     // Target pose
-    geometry_msgs::msg::PoseStamped::SharedPtr current_target_pose_;
+    geometry_msgs::msg::Vector3::SharedPtr current_target_pose_;
 
         // Parameters (const members initialized in constructor)
     const double linear_max_vel_;

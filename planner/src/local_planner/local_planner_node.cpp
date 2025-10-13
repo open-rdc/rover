@@ -25,7 +25,7 @@ control_frequency_(get_parameter("control_frequency").as_double())
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
 
     // ROS interfaces
-    target_pose_sub_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
+    target_pose_sub_ = this->create_subscription<geometry_msgs::msg::Vector3>(
         "target_pose", 10,
         std::bind(&LocalPlanner::target_pose_callback, this, std::placeholders::_1));
 
@@ -43,11 +43,9 @@ control_frequency_(get_parameter("control_frequency").as_double())
     RCLCPP_INFO(this->get_logger(), "Linear gain: %.2f  Angular gain: %.2f", linear_gain_, angular_gain_);
 }
 
-void LocalPlanner::target_pose_callback(const geometry_msgs::msg::PoseStamped::SharedPtr msg)
+void LocalPlanner::target_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr msg)
 {
     current_target_pose_ = msg;
-    RCLCPP_INFO(this->get_logger(), "Received target pose: [%.2f, %.2f, %.2f]",
-                msg->pose.position.x, msg->pose.position.y, msg->pose.position.z);
 }
 
 void LocalPlanner::control_timer_callback()
@@ -75,27 +73,23 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
         return cmd_vel;  // Return zero velocity
     }
 
-    // Transform target pose to utm frame if necessary
-    geometry_msgs::msg::PoseStamped target_pose_in_utm;
-    try {
-        tf_buffer_->transform(*current_target_pose_, target_pose_in_utm, "utm");
-    } catch (tf2::TransformException& ex) {
-        RCLCPP_WARN(this->get_logger(), "Could not transform target pose to utm frame: %s", ex.what());
-        return cmd_vel;  // Return zero velocity
-    }
+    // Extract target position and yaw from Vector3 message (already in utm frame)
+    geometry_msgs::msg::Point target_position;
+    target_position.x = current_target_pose_->x;
+    target_position.y = current_target_pose_->y;
+    target_position.z = 0.0;
 
-    // Calculate distance to target (both poses are now in utm frame)
-    double distance = calculate_distance(robot_pose.pose.position, target_pose_in_utm.pose.position);    // Check if we've reached the goal
+    // Calculate distance to target
+    double distance = calculate_distance(robot_pose.pose.position, target_position);
+    
+    // Check if we've reached the goal
     if (distance < goal_tolerance_) {
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Goal reached!");
         return cmd_vel;  // Return zero velocity
     }
 
-    // Calculate target yaw from current position to target
-    double target_yaw = std::atan2(
-        target_pose_in_utm.pose.position.y - robot_pose.pose.position.y,
-        target_pose_in_utm.pose.position.x - robot_pose.pose.position.x
-    );
+    // Use target yaw directly from Vector3 z component
+    double target_yaw = current_target_pose_->z;
 
     // Get current robot yaw
     tf2::Quaternion q_current;
@@ -121,8 +115,8 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
     cmd_vel.linear.x = linear_vel;
     cmd_vel.angular.z = angular_vel;
 
-    RCLCPP_DEBUG(this->get_logger(), "Distance: %.2f, Angle diff: %.2f, Linear vel: %.2f, Angular vel: %.2f",
-                 distance, angle_diff, linear_vel, angular_vel);
+    RCLCPP_INFO(this->get_logger(), "Current angle: %.2f, Target angle: %.2f, Angle diff: %.2f, Distance: %.2f",
+                 current_yaw, target_yaw, angle_diff, distance);
 
     return cmd_vel;
 }

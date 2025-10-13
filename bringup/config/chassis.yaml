@@ -2,7 +2,7 @@
 /**:
   ros__parameters:
     linear_max_vel: 1.0
-    angular_max_vel: 45.0
+    angular_max_vel: 90.0
 
 chassis_driver_node:
   ros__parameters:
@@ -22,6 +22,6 @@ teleop_twist_joy_node:
     axis_angular:
       yaw: 2  # ボタンの割り当て
     scale_angular:
-      yaw: 0.8
+      yaw: 1.5
 
     enable_button: 6

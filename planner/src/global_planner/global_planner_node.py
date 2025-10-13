@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Joy
-from geometry_msgs.msg import TransformStamped, PoseStamped
+from geometry_msgs.msg import TransformStamped, PoseStamped, Vector3
 import tf2_ros
 import tf2_geometry_msgs
 import csv
@@ -73,14 +73,26 @@ class GlobalPlannerNode(Node):
         """パスプランナーモードの初期化"""
         # ターゲットポーズのパブリッシャーを作成
         self.target_pose_publisher = self.create_publisher(
-            PoseStamped,
+            Vector3,
             'target_pose',
             10
         )
 
+        # ジョイスティックのサブスクリプションを作成
+        self.joy_subscription = self.create_subscription(
+            Joy,
+            'joy',
+            self.joy_callback_planner,
+            10
+        )
+
+        # パスプランナーの状態変数
+        self.planner_started = False
+
         self.load_waypoints()
         self.timer = self.create_timer(0.1, self.planner_callback)  # 10Hz
         self.get_logger().info(f"Path planner mode initialized with {len(self.waypoints)} waypoints")
+        self.get_logger().info("Press joy button to start path following")
 
     def joy_callback(self, msg):
         """ジョイスティックのコールバック（ウェイポイント記録用）"""
@@ -92,6 +104,26 @@ class GlobalPlannerNode(Node):
         # ボタンが押された瞬間を検出（立ち上がりエッジ）
         if current_button_state == 1 and self.previous_joy_button_state == 0:
             self.record_current_position()
+
+        self.previous_joy_button_state = current_button_state
+
+    def joy_callback_planner(self, msg):
+        """ジョイスティックのコールバック（パスプランナー用）"""
+        if len(msg.buttons) <= self.joy_button_index:
+            return
+
+        current_button_state = msg.buttons[self.joy_button_index]
+
+        # ボタンが押された瞬間を検出（立ち上がりエッジ）
+        if current_button_state == 1 and self.previous_joy_button_state == 0:
+            if not self.planner_started:
+                self.planner_started = True
+                self.get_logger().info("Path following started!")
+            else:
+                # 既に開始している場合は停止
+                self.planner_started = False
+                self.current_waypoint_index = 0  # リセット
+                self.get_logger().info("Path following stopped and reset!")
 
         self.previous_joy_button_state = current_button_state
 
@@ -166,6 +198,10 @@ class GlobalPlannerNode(Node):
         if not self.waypoints:
             return
 
+        # パスプランナーが開始されていない場合は何もしない
+        if not self.planner_started:
+            return
+
         if self.current_waypoint_index >= len(self.waypoints):
             # 最後のウェイポイントに到達したら、最後のウェイポイントを継続してパブリッシュ
             if len(self.waypoints) > 0:
@@ -218,27 +254,16 @@ class GlobalPlannerNode(Node):
             self.get_logger().warn(f"Failed to get transform: {e}")
 
     def publish_target_pose(self, waypoint):
-        """ターゲットウェイポイントをPoseStampedメッセージとしてパブリッシュ"""
-        pose_msg = PoseStamped()
+        """ターゲットウェイポイントをVector3メッセージとしてパブリッシュ"""
+        target_pose_msg = Vector3()
 
-        # ヘッダー情報を設定
-        pose_msg.header.stamp = self.get_clock().now().to_msg()
-        pose_msg.header.frame_id = 'utm'
-
-        # 位置を設定
-        pose_msg.pose.position.x = float(waypoint['x'])
-        pose_msg.pose.position.y = float(waypoint['y'])
-        pose_msg.pose.position.z = 0.0  # 2D navigation assumes z=0
-
-        # 姿勢（クォータニオン）を設定
-        yaw = float(waypoint['yaw'])
-        pose_msg.pose.orientation.x = 0.0
-        pose_msg.pose.orientation.y = 0.0
-        pose_msg.pose.orientation.z = math.sin(yaw / 2.0)
-        pose_msg.pose.orientation.w = math.cos(yaw / 2.0)
+        # x, y座標とyaw（z成分）を設定
+        target_pose_msg.x = float(waypoint['x'])
+        target_pose_msg.y = float(waypoint['y'])
+        target_pose_msg.z = float(waypoint['yaw'])  # yawをz成分として設定
 
         # パブリッシュ
-        self.target_pose_publisher.publish(pose_msg)
+        self.target_pose_publisher.publish(target_pose_msg)
 
 def main(args=None):
     rclpy.init(args=args)
