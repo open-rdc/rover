@@ -135,26 +135,19 @@ class GlobalPlannerNode(Node):
                 'utm', 'base_link', rclpy.time.Time()
             )
 
-            # 位置とヨー角を取得
+            # 位置を取得
             x = transform.transform.translation.x
             y = transform.transform.translation.y
 
-            # クォータニオンからヨー角を計算
-            quat = transform.transform.rotation
-            yaw = math.atan2(
-                2.0 * (quat.w * quat.z + quat.x * quat.y),
-                1.0 - 2.0 * (quat.y * quat.y + quat.z * quat.z)
-            )
-
             # CSVファイルに保存
-            self.save_waypoint_to_csv(x, y, yaw)
+            self.save_waypoint_to_csv(x, y)
 
-            self.get_logger().info(f"Waypoint recorded: x={x:.2f}, y={y:.2f}, yaw={yaw:.2f}")
+            self.get_logger().info(f"Waypoint recorded: x={x:.2f}, y={y:.2f}")
 
         except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException) as e:
             self.get_logger().warn(f"Failed to get transform: {e}")
 
-    def save_waypoint_to_csv(self, x, y, yaw):
+    def save_waypoint_to_csv(self, x, y):
         """ウェイポイントをCSVファイルに保存"""
         # ディレクトリが存在しない場合は作成
         waypoint_dir = os.path.dirname(self.waypoint_file)
@@ -167,8 +160,8 @@ class GlobalPlannerNode(Node):
         with open(self.waypoint_file, 'a', newline='') as csvfile:
             writer = csv.writer(csvfile)
             if not file_exists:
-                writer.writerow(['x', 'y', 'yaw'])  # ヘッダー
-            writer.writerow([x, y, yaw])
+                writer.writerow(['x', 'y'])  # ヘッダー
+            writer.writerow([x, y])
 
     def load_waypoints(self):
         """CSVファイルからウェイポイントを読み込み"""
@@ -183,8 +176,7 @@ class GlobalPlannerNode(Node):
                 for row in reader:
                     waypoint = {
                         'x': float(row['x']),
-                        'y': float(row['y']),
-                        'yaw': float(row['yaw'])
+                        'y': float(row['y'])
                     }
                     self.waypoints.append(waypoint)
 
@@ -257,10 +249,10 @@ class GlobalPlannerNode(Node):
         """ターゲットウェイポイントをVector3メッセージとしてパブリッシュ"""
         target_pose_msg = Vector3()
 
-        # x, y座標とyaw（z成分）を設定
+        # x, y座標を設定（zは0.0のまま）
         target_pose_msg.x = float(waypoint['x'])
         target_pose_msg.y = float(waypoint['y'])
-        target_pose_msg.z = float(waypoint['yaw'])  # yawをz成分として設定
+        target_pose_msg.z = 0.0
 
         # パブリッシュ
         self.target_pose_publisher.publish(target_pose_msg)

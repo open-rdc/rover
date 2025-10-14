@@ -73,7 +73,7 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
         return cmd_vel;  // Return zero velocity
     }
 
-    // Extract target position and yaw from Vector3 message (already in utm frame)
+    // Extract target position from Vector3 message (already in utm frame)
     geometry_msgs::msg::Point target_position;
     target_position.x = current_target_pose_->x;
     target_position.y = current_target_pose_->y;
@@ -88,8 +88,11 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
         return cmd_vel;  // Return zero velocity
     }
 
-    // Use target yaw directly from Vector3 z component
-    double target_yaw = current_target_pose_->z;
+    // Calculate target yaw from current position to target
+    double target_yaw = std::atan2(
+        target_position.y - robot_pose.pose.position.y,
+        target_position.x - robot_pose.pose.position.x
+    );
 
     // Get current robot yaw
     tf2::Quaternion q_current;
@@ -115,8 +118,12 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
     cmd_vel.linear.x = linear_vel;
     cmd_vel.angular.z = angular_vel;
 
-    RCLCPP_INFO(this->get_logger(), "Current angle: %.2f, Target angle: %.2f, Angle diff: %.2f, Distance: %.2f",
-                 current_yaw, target_yaw, angle_diff, distance);
+    RCLCPP_INFO(this->get_logger(), 
+                "Robot: [%.2f, %.2f], Target: [%.2f, %.2f], Distance: %.2f, "
+                "Current angle: %.2f, Target angle: %.2f, Angle diff: %.2f",
+                robot_pose.pose.position.x, robot_pose.pose.position.y,
+                target_position.x, target_position.y, distance,
+                current_yaw, target_yaw, angle_diff);
 
     return cmd_vel;
 }
