@@ -167,7 +167,8 @@ class NmeaTcpDriverNode(Node):
 
             # コース角（真北からの角度）をクォータニオンに変換
             # NMEAのコースは真北からの時計回り角度（degrees）
-            yaw_radians = math.radians(course)
+            # ROSの慣例に合わせて、北を0とし、西をプラス、東をマイナスに変換
+            yaw_radians = math.radians(-course)  # 時計回りを反時計回りに変換
             quaternion = quaternion_from_euler(0, 0, yaw_radians)
 
             quaternion_msg.quaternion.x = quaternion[0]
