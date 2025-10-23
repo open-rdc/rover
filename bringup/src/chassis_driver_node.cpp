@@ -87,7 +87,7 @@ void ChassisDriver::calculate_chassis(const geometry_msgs::msg::Twist::SharedPtr
 
     send_data_to_serial(left_erpm, right_erpm);
 
-    RCLCPP_INFO(this->get_logger(), "Sent left_erpm: %d, right_erpm: %d", left_erpm, right_erpm);
+    // RCLCPP_INFO(this->get_logger(), "Sent left_erpm: %d, right_erpm: %d", left_erpm, right_erpm);
 }
 
 // タイマーコールバック
