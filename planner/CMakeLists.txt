@@ -11,6 +11,7 @@ ament_auto_add_executable(local_planner_node src/local_planner/local_planner_nod
 # Install Python scripts
 install(PROGRAMS
   src/global_planner/global_planner_node.py
+  src/nmea_tcp_driver/nmea_tcp_driver_node.py
   DESTINATION lib/${PROJECT_NAME}
 )
 

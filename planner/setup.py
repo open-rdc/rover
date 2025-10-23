@@ -20,6 +20,7 @@ setup(
     entry_points={
         'console_scripts': [
             'global_planner_node = global_planner.global_planner_node:main',
+            'nmea_tcp_driver_node = nmea_tcp_driver.nmea_tcp_driver_node:main',
         ],
     },
 )
