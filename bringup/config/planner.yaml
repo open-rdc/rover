@@ -1,10 +1,10 @@
 # Global Planner Parameters
 global_planner_node:
   ros__parameters:
-    mode: 'path_planner'  # 'waypoint_recorder' or 'path_planner'
-    waypoint_file: '251014.csv'
+    mode: 'pp'  # 'wr(waypoint_recorder)' or 'pp(path_planner)'
+    waypoint_file: '251016.csv'
     joy_button_index: 0
-    waypoint_threshold: 2.0
+    waypoint_threshold: 1.0
 
 # Local Planner Parameters
 local_planner_node:

@@ -10,23 +10,22 @@ def generate_launch_description():
         'navsat.yaml'
     )
 
-    # nmea_tcpclient_driverノードの作成
+
     nmea_serial_driver_node = Node(
-        package='nmea_navsat_driver',
-        executable='nmea_tcpclient_driver',
+        package='planner',
+        executable='nmea_tcp_driver_node.py',
         parameters=[config_file_path],
-        remappings=[('fix', 'gps/fix')],
         output='screen'
     )
 
-    # navsat_transform_nodeの作成
     navsat_transform_node = Node(
         package='robot_localization',
         executable='navsat_transform_node',
         parameters=[config_file_path],
         remappings=[
             ('/imu', '/imu/data'),
-            ('/odometry/filtered', '/odometry/local')
+            ('/odometry/filtered', '/odometry/local'),
+            ('/gps/fix', '/fix')
         ],
         output='screen'
     )

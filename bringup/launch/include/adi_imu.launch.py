@@ -23,6 +23,7 @@ def generate_launch_description():
             # "parent_id": "odom",
             "rate": 100.0,
             "mode": "Register"
+            # "mode": "Attitude"
         }], # ノードを指定してパラメタを書くと読み込まない
     )
 

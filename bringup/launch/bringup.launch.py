@@ -22,6 +22,9 @@ def generate_launch_description():
     robot_localization_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([launch_include_path, '/robot_localization.launch.py'])
     )
+    navsat_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([launch_include_path, '/navsat.launch.py'])
+    )
 
     launch_description = LaunchDescription()
 
@@ -29,5 +32,6 @@ def generate_launch_description():
     launch_description.add_action(description_launch)
     launch_description.add_action(imu_launch)
     launch_description.add_action(robot_localization_launch)
+    launch_description.add_action(navsat_launch)
 
     return launch_description
