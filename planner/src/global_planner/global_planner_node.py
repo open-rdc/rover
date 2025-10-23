@@ -16,7 +16,7 @@ class GlobalPlannerNode(Node):
         super().__init__('global_planner_node')
 
         # パラメータの宣言
-        self.declare_parameter('mode', 'waypoint_recorder')  # 'waypoint_recorder' or 'path_planner'
+        self.declare_parameter('mode', 'wr')  # 'wr' or 'pp'
         self.declare_parameter('waypoint_file', 'waypoints.csv')
         self.declare_parameter('joy_button_index', 0)  # ジョイスティックのボタンインデックス
         self.declare_parameter('waypoint_threshold', 2.0)  # ウェイポイント到達判定の閾値[m]
@@ -49,9 +49,9 @@ class GlobalPlannerNode(Node):
         self.current_waypoint_index = 0
 
         # モードに応じた初期化
-        if self.mode == 'waypoint_recorder':
+        if self.mode == 'wr':
             self.setup_waypoint_recorder()
-        elif self.mode == 'path_planner':
+        elif self.mode == 'pp':
             self.setup_path_planner()
         else:
             self.get_logger().error(f"Unknown mode: {self.mode}")
