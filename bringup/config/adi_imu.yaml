@@ -1,7 +1,0 @@
-/**:
-  ros__parameters:
-    device: "/dev/ttyIMU"
-    # parent_id: "odom"
-    frame_id: "base_link"
-    rate: 100.0
-    mode: "Register"

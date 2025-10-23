@@ -15,8 +15,15 @@ def generate_launch_description():
     adis_rcv_csv_node = Node(
         package='adi_imu_tr_driver_ros2',
         executable='adis_rcv_csv_node',
-        parameters=[config_file_path],
-        output='screen'
+        output='screen',
+        parameters=
+        [{
+            "device": "/dev/ttyIMU",
+            "frame_id": "base_link",
+            # "parent_id": "odom",
+            "rate": 100.0,
+            "mode": "Register"
+        }], # ノードを指定してパラメタを書くと読み込まない
     )
 
     imu_filter_node = Node(
