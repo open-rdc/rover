@@ -1,3 +1,9 @@
 [submodule "ADI_IMU_TR_Driver_ROS2"]
 	path = ADI_IMU_TR_Driver_ROS2
 	url = https://github.com/technoroad/ADI_IMU_TR_Driver_ROS2
+[submodule "urg_node2"]
+	path = urg_node2
+	url = https://github.com/Hokuyo-aut/urg_node2
+[submodule "utilities"]
+	path = utilities
+	url = https://github.com/hcmos/ros2-utilities
