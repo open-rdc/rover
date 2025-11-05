@@ -156,8 +156,8 @@ void ChassisDriver::send_data_to_serial(const int left_rpm, const int right_rpm)
     }
 
     uint8_t bytes[serial_byte_size];
-    int_to_bytes(bytes, static_cast<int32_t>(left_rpm));
-    int_to_bytes(bytes + 4, static_cast<int32_t>(right_rpm));
+    int32_to_bytes(bytes, static_cast<int32_t>(left_rpm));
+    int32_to_bytes(bytes + 4, static_cast<int32_t>(right_rpm));
     if(mode == Mode::cmd){
         bytes[8] = 0x01;
     } else if(mode == Mode::joy){
@@ -184,7 +184,7 @@ void ChassisDriver::read_wheel_erpms_from_serial() {
 
     if (bytes_read == serial_byte_size) {
         for (int i = 0; i < 4; i++) {
-            wheel_erpms[i] = bytes_to_int(buffer + i*4);
+            wheel_erpms[i] = bytes_to_int32(buffer + i*4);
         }
     } else if (bytes_read > 0) {
         RCLCPP_WARN(this->get_logger(), "Incomplete data received: %ld bytes", bytes_read);
