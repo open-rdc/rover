@@ -10,6 +10,8 @@ import csv
 import os
 import math
 from rclpy.parameter import Parameter
+from ament_index_python.packages import get_package_share_directory
+import shutil
 
 class GlobalPlannerNode(Node):
     def __init__(self):
@@ -27,17 +29,37 @@ class GlobalPlannerNode(Node):
         self.joy_button_index = self.get_parameter('joy_button_index').get_parameter_value().integer_value
         self.waypoint_threshold = self.get_parameter('waypoint_threshold').get_parameter_value().double_value
 
-        # ウェイポイントファイルのフルパスを構築（このパッケージのソースディレクトリのconfigから取得）
+        # ウェイポイントファイルのフルパスを構築（ROS 2のshareディレクトリを使用）
         try:
-            # 現在のファイルからパッケージのルートディレクトリを取得
+            # パッケージのshareディレクトリを取得
+            package_share_directory = get_package_share_directory('planner')
+            share_config_dir = os.path.join(package_share_directory, 'config')
+
+            # 書き込み可能なディレクトリを設定（ホームディレクトリまたはtmp）
+            writable_config_dir = os.path.expanduser('~/.ros/planner_config')
+
+            # 書き込み可能なディレクトリが存在しない場合は作成
+            if not os.path.exists(writable_config_dir):
+                os.makedirs(writable_config_dir)
+                self.get_logger().info(f"Created writable config directory: {writable_config_dir}")
+
+            # 読み取り用と書き込み用のファイルパスを設定
+            self.waypoint_file_template = os.path.join(share_config_dir, waypoint_filename)
+            self.waypoint_file = os.path.join(writable_config_dir, waypoint_filename)
+
+            # shareディレクトリにテンプレートファイルが存在する場合、書き込み可能な場所にコピー
+            if os.path.exists(self.waypoint_file_template) and not os.path.exists(self.waypoint_file):
+                shutil.copy2(self.waypoint_file_template, self.waypoint_file)
+                self.get_logger().info(f"Copied template waypoint file from {self.waypoint_file_template} to {self.waypoint_file}")
+
+            self.get_logger().info(f"Using waypoint file: {self.waypoint_file}")
+
+        except Exception as e:
+            # フォールバック: 従来の方法
+            self.get_logger().warn(f"Could not access ROS 2 share directory, using fallback method: {e}")
             current_file_path = os.path.abspath(__file__)
-            # global_planner_node.py -> src/global_planner/global_planner_node.py -> src -> package_root
             package_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))
             self.waypoint_file = os.path.join(package_root, 'config', waypoint_filename)
-            self.get_logger().info(f"Using waypoint file: {self.waypoint_file}")
-        except Exception as e:
-            self.get_logger().warn(f"Could not determine package path, using relative path: {e}")
-            self.waypoint_file = os.path.join('config', waypoint_filename)
 
         # TFバッファとリスナーの初期化
         self.tf_buffer = tf2_ros.Buffer()

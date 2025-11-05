@@ -15,5 +15,12 @@ install(PROGRAMS
   DESTINATION lib/${PROJECT_NAME}
 )
 
+# Install config directory
+install(DIRECTORY
+  config/
+  DESTINATION share/${PROJECT_NAME}/config
+  FILES_MATCHING PATTERN "*.csv"
+)
+
 # Auto package (includes automatic installation of headers and other resources)
 ament_auto_package()
