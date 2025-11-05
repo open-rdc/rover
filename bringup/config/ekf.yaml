@@ -79,11 +79,11 @@ ekf_filter_node_map:
     #                   false, false, true]
     imu0_differential: true
 
-    imu1: /imu/heading
-    imu1_config:    [false, false, false,
-                      false, false, true,
-                      false, false, false,
-                      false, false, false,
-                      false, false, false]
+    # imu1: /imu/heading
+    # imu1_config:    [false, false, false,
+    #                false, false, true,
+    #                false, false, false,
+    #                false, false, false,
+    #                false, false, false]
 
     use_control: false
