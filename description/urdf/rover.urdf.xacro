@@ -4,19 +4,25 @@
   <xacro:include filename="$(find description)/urdf/material_colors.xacro"/>
   <xacro:include filename="$(find description)/urdf/links/base_link.urdf.xacro"/>
   <xacro:include filename="$(find description)/urdf/sensors/imu.urdf.xacro"/>
-  <xacro:include filename="$(find description)/urdf/sensors/gnss.urdf.xacro"/>
-  <!-- <xacro:include filename="$(find description)/urdf/sensors/hokuyo.urdf.xacro"/> -->
-  <!-- Setting for base -->
-  <xacro:base_link/>
+  <xacro:include filename="$(find description)/urdf/sensors/gps.urdf.xacro"/>
+  <xacro:include filename="$(find description)/urdf/sensors/hokuyo.urdf.xacro"/>
 
-  <!-- Setting for IMU -->
-  <xacro:sensor_imu name="imu" parent="base_link" size="0.05 0.05 0.05">
-    <origin xyz="0.23 0.0 0.270" rpy="0 0 0"/>
-    <origin_child xyz="0.0 0.0 0.0" rpy="0 0 0"/>
-  </xacro:sensor_imu>
+    <!-- Setting for baselink -->
+    <xacro:base_link/>
 
-    <!-- Setting for GNSS -->
-    <xacro:sensor_gnss name="gps" parent="base_link">
-      <origin xyz="0.0 0.0 0.35" rpy="0 0 0"/>
-    </xacro:sensor_gnss>
+    <!-- Setting for IMU -->
+    <xacro:sensor_imu name="imu" parent="base_link" size="0.05 0.05 0.05">
+        <origin xyz="0.0 0.0 0.3" rpy="0 0 0"/>
+        <origin_child xyz="0.0 0.0 0.0" rpy="0 0 0"/>
+    </xacro:sensor_imu>
+
+    <!-- Setting for GPS -->
+    <xacro:sensor_gps name="gps" parent="base_link">
+        <origin xyz="0.15 0.0 0.4" rpy="0 0 0"/>
+    </xacro:sensor_gps>
+
+    <!-- Setting for HOKUYO -->
+    <xacro:sensor_hokuyo name="hokuyo" parent="base_link" size="0.05 0.05 0.05">
+        <origin xyz="0.35 0.0 0.3" rpy="0 0 0"/>
+    </xacro:sensor_hokuyo>
 </robot>
