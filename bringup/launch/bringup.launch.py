@@ -25,6 +25,12 @@ def generate_launch_description():
     navsat_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource([launch_include_path, '/navsat.launch.py'])
     )
+    urg_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([launch_include_path, '/urg_node2.launch.py'])
+    )
+    laser_filters_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource([launch_include_path, '/laser_filters.launch.py'])
+    )
 
     launch_description = LaunchDescription()
 
@@ -33,5 +39,7 @@ def generate_launch_description():
     launch_description.add_action(imu_launch)
     launch_description.add_action(robot_localization_launch)
     launch_description.add_action(navsat_launch)
+    launch_description.add_action(urg_launch)
+    launch_description.add_action(laser_filters_launch)
 
     return launch_description
