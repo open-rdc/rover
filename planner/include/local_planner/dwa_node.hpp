@@ -1,5 +1,5 @@
-#ifndef LOCAL_PLANNER__LOCAL_PLANNER_NODE_HPP_
-#define LOCAL_PLANNER__LOCAL_PLANNER_NODE_HPP_
+#ifndef LOCAL_PLANNER__DWA_NODE_HPP_
+#define LOCAL_PLANNER__DWA_NODE_HPP_
 
 #include <rclcpp/rclcpp.hpp>
 // #include <geometry_msgs/msg/pose_stamped.hpp>
@@ -14,11 +14,11 @@
 namespace local_planner
 {
 
-class LocalPlanner : public rclcpp::Node
+class DWA : public rclcpp::Node
 {
 public:
-    LocalPlanner(const rclcpp::NodeOptions& options = rclcpp::NodeOptions{});
-    LocalPlanner(const std::string& name_space, const rclcpp::NodeOptions& options);
+    DWA(const rclcpp::NodeOptions& options = rclcpp::NodeOptions{});
+    DWA(const std::string& name_space, const rclcpp::NodeOptions& options);
 
 private:
     void target_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr msg);
@@ -36,19 +36,13 @@ private:
     // Target pose
     geometry_msgs::msg::Vector3::SharedPtr current_target_pose_;
 
-        // Parameters (const members initialized in constructor)
+    // Parameters (const members initialized in constructor)
     const double linear_max_vel_;
     const double angular_max_vel_;
-    const double linear_gain_;
-    const double angular_gain_;
-    const double goal_tolerance_;
     const double control_frequency_;
-    geometry_msgs::msg::Twist calculate_cmd_vel();
     bool get_robot_pose(geometry_msgs::msg::PoseStamped& robot_pose);
-    double calculate_distance(const geometry_msgs::msg::Point& p1, const geometry_msgs::msg::Point& p2);
-    double normalize_angle(double angle);
 };
 
 }  // namespace local_planner
 
-#endif  // LOCAL_PLANNER__LOCAL_PLANNER_NODE_HPP_
+#endif  // LOCAL_PLANNER__DWA_NODE_HPP_

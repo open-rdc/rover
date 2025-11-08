@@ -1,4 +1,4 @@
-#include "local_planner/local_planner_node.hpp"
+#include "local_planner/simple_planner_node.hpp"
 #include <cmath>
 #include <chrono>
 #include "utilities/utils.hpp"
@@ -9,10 +9,10 @@ using namespace utils;
 namespace local_planner
 {
 
-LocalPlanner::LocalPlanner(const rclcpp::NodeOptions& options) : LocalPlanner("", options) {}
+SimplePlanner::SimplePlanner(const rclcpp::NodeOptions& options) : SimplePlanner("", options) {}
 
-LocalPlanner::LocalPlanner(const std::string& name_space, const rclcpp::NodeOptions& options)
-: rclcpp::Node("local_planner_node", name_space, options),
+SimplePlanner::SimplePlanner(const std::string& name_space, const rclcpp::NodeOptions& options)
+: rclcpp::Node("simple_planner_node", name_space, options),
 linear_max_vel_(get_parameter("linear_max_vel").as_double()),
 angular_max_vel_(get_parameter("angular_max_vel").as_double()),
 linear_gain_(get_parameter("linear_gain").as_double()),
@@ -27,28 +27,28 @@ control_frequency_(get_parameter("control_frequency").as_double())
     // ROS interfaces
     target_pose_sub_ = this->create_subscription<geometry_msgs::msg::Vector3>(
         "target_pose", 10,
-        std::bind(&LocalPlanner::target_pose_callback, this, std::placeholders::_1));
+        std::bind(&SimplePlanner::target_pose_callback, this, std::placeholders::_1));
 
     cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("cmd_vel", 10);
 
     // Control timer
     auto timer_period = std::chrono::milliseconds(static_cast<int>(1000.0 / control_frequency_));
     control_timer_ = this->create_wall_timer(
-        timer_period, std::bind(&LocalPlanner::control_timer_callback, this));
+        timer_period, std::bind(&SimplePlanner::control_timer_callback, this));
 
-    RCLCPP_INFO(this->get_logger(), "Local Planner Node has been started");
+    RCLCPP_INFO(this->get_logger(), "Simple Planner Node has been started");
     RCLCPP_INFO(this->get_logger(), "Max linear velocity: %.2f m/s", linear_max_vel_);
     RCLCPP_INFO(this->get_logger(), "Max angular velocity: %.2f rad/s", angular_max_vel_);
     RCLCPP_INFO(this->get_logger(), "Control frequency: %.1f Hz", control_frequency_);
     RCLCPP_INFO(this->get_logger(), "Linear gain: %.2f  Angular gain: %.2f", linear_gain_, angular_gain_);
 }
 
-void LocalPlanner::target_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr msg)
+void SimplePlanner::target_pose_callback(const geometry_msgs::msg::Vector3::SharedPtr msg)
 {
     current_target_pose_ = msg;
 }
 
-void LocalPlanner::control_timer_callback()
+void SimplePlanner::control_timer_callback()
 {
     if (!current_target_pose_) {
         // No target pose received yet, publish zero velocity
@@ -62,7 +62,7 @@ void LocalPlanner::control_timer_callback()
     cmd_vel_pub_->publish(cmd_vel);
 }
 
-geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
+geometry_msgs::msg::Twist SimplePlanner::calculate_cmd_vel()
 {
     auto cmd_vel = geometry_msgs::msg::Twist();
 
@@ -81,7 +81,7 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
 
     // Calculate distance to target
     double distance = calculate_distance(robot_pose.pose.position, target_position);
-    
+
     // Check if we've reached the goal
     if (distance < goal_tolerance_) {
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "Goal reached!");
@@ -118,7 +118,7 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
     cmd_vel.linear.x = linear_vel;
     cmd_vel.angular.z = angular_vel;
 
-    RCLCPP_INFO(this->get_logger(), 
+    RCLCPP_INFO(this->get_logger(),
                 "Robot: [%.2f, %.2f], Target: [%.2f, %.2f], Distance: %.2f, "
                 "Current angle: %.2f, Target angle: %.2f, Angle diff: %.2f",
                 robot_pose.pose.position.x, robot_pose.pose.position.y,
@@ -128,7 +128,7 @@ geometry_msgs::msg::Twist LocalPlanner::calculate_cmd_vel()
     return cmd_vel;
 }
 
-bool LocalPlanner::get_robot_pose(geometry_msgs::msg::PoseStamped& robot_pose)
+bool SimplePlanner::get_robot_pose(geometry_msgs::msg::PoseStamped& robot_pose)
 {
     try {
         auto transform = tf_buffer_->lookupTransform("utm", "base_link", tf2::TimePointZero);
@@ -148,7 +148,7 @@ bool LocalPlanner::get_robot_pose(geometry_msgs::msg::PoseStamped& robot_pose)
     }
 }
 
-double LocalPlanner::calculate_distance(const geometry_msgs::msg::Point& p1, const geometry_msgs::msg::Point& p2)
+double SimplePlanner::calculate_distance(const geometry_msgs::msg::Point& p1, const geometry_msgs::msg::Point& p2)
 {
     double dx = p2.x - p1.x;
     double dy = p2.y - p1.y;
@@ -156,7 +156,7 @@ double LocalPlanner::calculate_distance(const geometry_msgs::msg::Point& p1, con
 }
 
 
-double LocalPlanner::normalize_angle(double angle)
+double SimplePlanner::normalize_angle(double angle)
 {
     while (angle > d_pi) angle -= 2.0 * d_pi;
     while (angle < -d_pi) angle += 2.0 * d_pi;
@@ -173,7 +173,7 @@ int main(int argc, char * argv[])
     options.allow_undeclared_parameters(true);
     options.automatically_declare_parameters_from_overrides(true);
 
-    rclcpp::spin(std::make_shared<local_planner::LocalPlanner>(options));
+    rclcpp::spin(std::make_shared<local_planner::SimplePlanner>(options));
     rclcpp::shutdown();
     return 0;
 }

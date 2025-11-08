@@ -89,7 +89,7 @@ class GlobalPlannerNode(Node):
             self.joy_callback,
             10
         )
-        self.get_logger().info("Waypoint recorder mode initialized")
+        # self.get_logger().info("Waypoint recorder mode initialized")
 
     def setup_path_planner(self):
         """パスプランナーモードの初期化"""
@@ -113,8 +113,7 @@ class GlobalPlannerNode(Node):
 
         self.load_waypoints()
         self.timer = self.create_timer(0.1, self.planner_callback)  # 10Hz
-        self.get_logger().info(f"Path planner mode initialized with {len(self.waypoints)} waypoints")
-        self.get_logger().info("Press joy button to start path following")
+        # self.get_logger().info(f"Path planner mode initialized with {len(self.waypoints)} waypoints")
 
     def joy_callback(self, msg):
         """ジョイスティックのコールバック（ウェイポイント記録用）"""
