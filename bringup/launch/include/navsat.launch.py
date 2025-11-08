@@ -13,7 +13,7 @@ def generate_launch_description():
 
     nmea_tcp_driver_node = Node(
         package='planner',
-        executable='nmea_tcp_driver_node.py',
+        executable='gga_node.py',
         name='nmea_tcp_driver_node',
         parameters=[config_file_path],
         output='screen'
