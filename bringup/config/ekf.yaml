@@ -17,6 +17,8 @@ ekf_filter_node_odom:
                   true,  true,  false,
                   false, false, true,
                   false, false, false]
+    odom0_differential: false
+    odom0_relative: true
 
     imu0: /imu/data
     imu0_config:    [false, false, false,
@@ -30,6 +32,7 @@ ekf_filter_node_odom:
         #         roll_vel, pitch_vel, yaw_vel,
         #         x_accel , y_accel  , z_accel]
     imu0_differential: true
+    imu0_relative: true
 
     use_control: false
 
@@ -54,7 +57,8 @@ ekf_filter_node_map:
                   true,  true,  false,
                   false, false, true,
                   false, false, false]
-    # odom0_differential: true
+    odom0_differential: false
+    odom0_relative: true
 
     odom1: /odometry/gps
     odom1_config: [true,  true,  false,
@@ -63,7 +67,7 @@ ekf_filter_node_map:
                   false, false, false,
                   false, false, false]
     # odom1_differential: true
-    odom1_queue_size: 20
+    # odom1_queue_size: 20
     # odom1_pose_rejection_threshold: 10.0
 
     imu0: /imu/data
@@ -78,6 +82,7 @@ ekf_filter_node_map:
     #                   true, true, true,
     #                   false, false, true]
     imu0_differential: true
+    imu0_relative: true
 
     # imu1: /imu/heading
     # imu1_config:    [false, false, false,

@@ -2,15 +2,15 @@
 global_planner_node:
   ros__parameters:
     mode: 'pp'  # 'wr(waypoint_recorder)' or 'pp(path_planner)'
-    waypoint_file: '251105.csv'
+    waypoint_file: '251108_1.csv'
     joy_button_index: 0
-    waypoint_threshold: 1.0
+    waypoint_threshold: 0.7
 
 # Local Planner Parameters
 local_planner_node:
   ros__parameters:
     # linear_max_vel と angular_max_vel は chassis.yaml から取得
     linear_gain: 1.0
-    angular_gain: 5.0
+    angular_gain: 6.0
     goal_tolerance: 0.1
     control_frequency: 10.0
