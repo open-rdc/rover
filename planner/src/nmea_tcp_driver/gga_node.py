@@ -5,7 +5,7 @@ from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, NavSatStatus
 import socket
 import threading
-import re
+# import re
 import math
 
 class NmeaTcpDriverNode(Node):
