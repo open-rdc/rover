@@ -24,9 +24,9 @@ def generate_launch_description():
         output='screen'
     )
 
-    local_planner_node = Node(
+    dwa_node = Node(
         package='planner',
-        executable='local_planner_node',
+        executable='dwa_node',
         parameters=[planner_config_file_path, chassis_config_file_path],
         output='screen'
     )
@@ -34,6 +34,6 @@ def generate_launch_description():
     launch_description = LaunchDescription()
 
     launch_description.add_entity(global_planner_node)
-    launch_description.add_entity(local_planner_node)
+    launch_description.add_entity(dwa_node)
 
     return launch_description
