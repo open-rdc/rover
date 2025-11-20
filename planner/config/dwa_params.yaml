@@ -1,0 +1,19 @@
+dwa_node:
+  ros__parameters:
+    # Basic parameters
+    linear_max_vel: 0.5      # Maximum linear velocity [m/s]
+    angular_max_vel: 1.5     # Maximum angular velocity [rad/s]
+    control_frequency: 20.0  # Control loop frequency [Hz]
+
+    # DWA algorithm parameters
+    predict_time: 0.8        # Prediction time horizon [s] (reduced for stability)
+    linear_acceleration: 2.0  # Maximum linear acceleration [m/s^2] (increased)
+    angular_acceleration: 3.0 # Maximum angular acceleration [rad/s^2] (increased)
+    linear_resolution: 0.02  # Linear velocity resolution [m/s]
+    angular_resolution: 0.02 # Angular velocity resolution [rad/s]
+    robot_radius: 0.05       # Robot radius for collision checking [m]
+
+    # Cost function weights
+    heading_gain: 10.0       # Weight for heading cost
+    obstacle_gain: 2.0       # Weight for obstacle cost
+    velocity_gain: 1.0       # Weight for velocity cost (increased for stability)
