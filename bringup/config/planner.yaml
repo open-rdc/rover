@@ -1,13 +1,14 @@
 global_planner_node:
   ros__parameters:
-    mode: 'wr'  # 'wr(waypoint_recorder)' or 'pp(path_planner)'
-    waypoint_file: '251108_2.csv'
+    mode: 'pp'  # 'wr(waypoint_recorder)' or 'pp(path_planner)'
+    waypoint_file: '251114_1.csv'
     joy_button_index: 0
     waypoint_threshold: 0.7
 
 simple_planner_node:
   ros__parameters:
-    # linear_max_vel と angular_max_vel は chassis.yaml から取得
+    linear_max_vel: 1.0
+    angular_max_vel: 1.0
     linear_gain: 1.0
     angular_gain: 6.0
     goal_tolerance: 0.1
@@ -15,5 +16,20 @@ simple_planner_node:
 
 dwa_node:
   ros__parameters:
-    # linear_max_vel と angular_max_vel は chassis.yaml から取得
-    control_frequency: 10.0
+    # Basic parameters
+    linear_max_vel: 0.5      # Maximum linear velocity [m/s]
+    angular_max_vel: 1.5     # Maximum angular velocity [rad/s]
+    control_frequency: 20.0  # Control loop frequency [Hz]
+
+    # DWA algorithm parameters
+    predict_time: 0.8        # Prediction time horizon [s] (reduced for stability)
+    linear_acceleration: 0.5  # Maximum linear acceleration [m/s^2] (increased)
+    angular_acceleration: 1.0 # Maximum angular acceleration [rad/s^2] (increased)
+    linear_resolution: 0.02  # Linear velocity resolution [m/s]
+    angular_resolution: 0.02 # Angular velocity resolution [rad/s]
+    robot_radius: 0.2       # Robot radius for collision checking [m]
+
+    # Cost function weights
+    heading_gain: 20.0       # Weight for heading cost
+    obstacle_gain: 1.0       # Weight for obstacle cost
+    velocity_gain: 0.5       # Weight for velocity cost (increased for stability)

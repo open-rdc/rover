@@ -27,7 +27,7 @@ def generate_launch_description():
     dwa_node = Node(
         package='planner',
         executable='dwa_node',
-        parameters=[planner_config_file_path, chassis_config_file_path],
+        parameters=[planner_config_file_path],
         output='screen'
     )
 
