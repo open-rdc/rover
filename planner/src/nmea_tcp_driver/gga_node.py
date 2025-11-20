@@ -194,11 +194,11 @@ class NmeaTcpDriverNode(Node):
             #     horizontal_variance *= 2  # 2倍
             #     vertical_variance *= 2
 
-            navsatfix_msg.position_covariance = [
-                horizontal_variance, 0.0, 0.0,
-                0.0, horizontal_variance, 0.0,
-                0.0, 0.0, vertical_variance
-            ]
+            # navsatfix_msg.position_covariance = [
+            #     horizontal_variance, 0.0, 0.0,
+            #     0.0, horizontal_variance, 0.0,
+            #     0.0, 0.0, vertical_variance
+            # ]
 
             self.navsatfix_pub.publish(navsatfix_msg)
 
