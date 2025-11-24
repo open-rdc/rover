@@ -6,14 +6,22 @@ dwa_node:
     control_frequency: 20.0  # Control loop frequency [Hz]
 
     # DWA algorithm parameters
-    predict_time: 0.8        # Prediction time horizon [s] (reduced for stability)
+    predict_time: 1.0        # Prediction time horizon [s] (reduced for stability)
     linear_acceleration: 2.0  # Maximum linear acceleration [m/s^2] (increased)
     angular_acceleration: 3.0 # Maximum angular acceleration [rad/s^2] (increased)
     linear_resolution: 0.02  # Linear velocity resolution [m/s]
     angular_resolution: 0.02 # Angular velocity resolution [rad/s]
-    robot_radius: 0.05       # Robot radius for collision checking [m]
+    robot_radius: 0.2       # Robot radius for collision checking [m]
 
     # Cost function weights
-    heading_gain: 10.0       # Weight for heading cost
+    heading_gain: 3.0       # Weight for heading cost
     obstacle_gain: 2.0       # Weight for obstacle cost
     velocity_gain: 1.0       # Weight for velocity cost (increased for stability)
+
+    # Non-holonomic and tuning parameters
+    min_turning_radius: 0.05       # Minimum turning radius [m]
+    min_linear_vel_for_turn: 0.05  # Smallest linear speed that allows turning [m/s]
+    goal_tolerance: 0.7           # Distance threshold to stop at goal [m]
+    heading_angle_weight: 0.6      # Weight for heading alignment inside heading cost
+    obstacle_margin: 0.3          # Extra safety margin around the robot [m]
+    obstacle_predict_time: 3.0     # Longer horizon used only for obstacle clearance [s]

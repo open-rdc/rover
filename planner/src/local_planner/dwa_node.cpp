@@ -27,7 +27,13 @@ angular_resolution_(get_parameter("angular_resolution").as_double()),
 robot_radius_(get_parameter("robot_radius").as_double()),
 heading_gain_(get_parameter("heading_gain").as_double()),
 obstacle_gain_(get_parameter("obstacle_gain").as_double()),
-velocity_gain_(get_parameter("velocity_gain").as_double())
+velocity_gain_(get_parameter("velocity_gain").as_double()),
+min_turning_radius_(get_parameter("min_turning_radius").as_double()),
+min_linear_vel_for_turn_(get_parameter("min_linear_vel_for_turn").as_double()),
+goal_tolerance_(get_parameter("goal_tolerance").as_double()),
+heading_angle_weight_(get_parameter("heading_angle_weight").as_double()),
+obstacle_margin_(get_parameter("obstacle_margin").as_double()),
+obstacle_predict_time_(get_parameter("obstacle_predict_time").as_double())
 {
     // TF2 setup
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -84,171 +90,252 @@ void DWA::timer_callback(){
         return;
     }
 
+    double goal_distance = std::hypot(
+        current_target_pose_->x - robot_pose.pose.position.x,
+        current_target_pose_->y - robot_pose.pose.position.y);
+
+    if (goal_distance < goal_tolerance_) {
+        geometry_msgs::msg::Twist stop_cmd;
+        current_velocity_ = stop_cmd;
+        cmd_vel_pub_->publish(stop_cmd);
+        return;
+    }
+
     // Calculate optimal velocity using DWA
     auto cmd_vel = calculate_optimal_velocity(robot_pose);
     current_velocity_ = cmd_vel;
     cmd_vel_pub_->publish(cmd_vel);
 }
 
+std::vector<geometry_msgs::msg::Point> DWA::extract_obstacle_points(const geometry_msgs::msg::PoseStamped& robot_pose) const{
+    std::vector<geometry_msgs::msg::Point> obstacles;
+    if (!current_laser_scan_) {
+        return obstacles;
+    }
+
+    obstacles.reserve(current_laser_scan_->ranges.size());
+    const double base_yaw = tf2::getYaw(robot_pose.pose.orientation);
+
+    for (size_t i = 0; i < current_laser_scan_->ranges.size(); ++i) {
+        const double range = current_laser_scan_->ranges[i];
+
+        if (std::isnan(range) || std::isinf(range) ||
+            range < current_laser_scan_->range_min ||
+            range > current_laser_scan_->range_max ||
+            range < 0.05) {
+            continue;
+        }
+
+        geometry_msgs::msg::Point obstacle;
+        const double angle = current_laser_scan_->angle_min + static_cast<double>(i) * current_laser_scan_->angle_increment;
+        obstacle.x = robot_pose.pose.position.x + range * std::cos(base_yaw + angle);
+        obstacle.y = robot_pose.pose.position.y + range * std::sin(base_yaw + angle);
+        obstacle.z = robot_pose.pose.position.z;
+        obstacles.push_back(obstacle);
+    }
+
+    return obstacles;
+}
+
+Trajectory DWA::simulate_trajectory(double linear, double angular, const geometry_msgs::msg::PoseStamped& robot_pose, const std::vector<geometry_msgs::msg::Point>& obstacles) const{
+    Trajectory trajectory;
+    trajectory.linear_vel = linear;
+    trajectory.angular_vel = angular;
+
+    double yaw = tf2::getYaw(robot_pose.pose.orientation);
+    double x = robot_pose.pose.position.x;
+    double y = robot_pose.pose.position.y;
+
+    const double collision_threshold = robot_radius_ + obstacle_margin_;
+    const double heading_horizon = predict_time_;
+    const double obstacle_horizon = std::max(obstacle_predict_time_, heading_horizon);
+
+    double accumulated_time = 0.0;
+    bool heading_state_recorded = (heading_horizon <= 0.0);
+
+    trajectory.heading_position.x = robot_pose.pose.position.x;
+    trajectory.heading_position.y = robot_pose.pose.position.y;
+    trajectory.heading_position.z = robot_pose.pose.position.z;
+    trajectory.heading_yaw = yaw;
+    trajectory.final_position = trajectory.heading_position;
+    trajectory.final_yaw = yaw;
+
+    trajectory.path.reserve(static_cast<size_t>(obstacle_horizon / dt_) + 1);
+
+    while (accumulated_time < obstacle_horizon) {
+        const double remaining_time = obstacle_horizon - accumulated_time;
+        const double step = std::min(dt_, remaining_time);
+
+        const double previous_x = x;
+        const double previous_y = y;
+        const double previous_yaw = yaw;
+
+        yaw += angular * step;
+        x += linear * std::cos(yaw) * step;
+        y += linear * std::sin(yaw) * step;
+
+        geometry_msgs::msg::Point waypoint;
+        waypoint.x = x;
+        waypoint.y = y;
+        waypoint.z = robot_pose.pose.position.z;
+        trajectory.path.push_back(waypoint);
+
+        if (!heading_state_recorded && accumulated_time + step >= heading_horizon) {
+            const double overshoot = accumulated_time + step - heading_horizon;
+            double ratio = (step - overshoot) / std::max(step, 1e-6);
+            ratio = std::clamp(ratio, 0.0, 1.0);
+            const double interpolated_x = previous_x + ratio * (x - previous_x);
+            const double interpolated_y = previous_y + ratio * (y - previous_y);
+            const double interpolated_yaw = previous_yaw + ratio * (yaw - previous_yaw);
+
+            trajectory.heading_position.x = interpolated_x;
+            trajectory.heading_position.y = interpolated_y;
+            trajectory.heading_position.z = robot_pose.pose.position.z;
+            trajectory.heading_yaw = interpolated_yaw;
+            heading_state_recorded = true;
+        }
+
+        for (const auto& obstacle : obstacles) {
+            const double distance = std::hypot(x - obstacle.x, y - obstacle.y);
+            if (distance < trajectory.min_distance) {
+                trajectory.min_distance = distance;
+            }
+            if (distance <= collision_threshold) {
+                trajectory.collision = true;
+                break;
+            }
+        }
+
+        accumulated_time += step;
+
+        if (trajectory.collision) {
+            break;
+        }
+    }
+
+    if (!heading_state_recorded) {
+        trajectory.heading_position.x = x;
+        trajectory.heading_position.y = y;
+        trajectory.heading_position.z = robot_pose.pose.position.z;
+        trajectory.heading_yaw = yaw;
+    }
+
+    trajectory.final_position.x = x;
+    trajectory.final_position.y = y;
+    trajectory.final_position.z = robot_pose.pose.position.z;
+    trajectory.final_yaw = yaw;
+
+    return trajectory;
+}
+
 std::vector<std::pair<double, double>> DWA::calculate_dynamic_window(double current_linear, double current_angular){
     std::vector<std::pair<double, double>> velocities;
 
-    // Calculate velocity limits based on maximum velocities
     double min_linear = -linear_max_vel_;
     double max_linear = linear_max_vel_;
     double min_angular = -angular_max_vel_;
     double max_angular = angular_max_vel_;
 
-    // Apply acceleration constraints
-    double linear_accel_limit = linear_acceleration_ * dt_;
-    double angular_accel_limit = angular_acceleration_ * dt_;
+    const double linear_accel_limit = linear_acceleration_ * dt_;
+    const double angular_accel_limit = angular_acceleration_ * dt_;
 
     min_linear = std::max(min_linear, current_linear - linear_accel_limit);
     max_linear = std::min(max_linear, current_linear + linear_accel_limit);
     min_angular = std::max(min_angular, current_angular - angular_accel_limit);
     max_angular = std::min(max_angular, current_angular + angular_accel_limit);
 
-    // Generate velocity candidates
-    for (double v = min_linear; v <= max_linear; v += linear_resolution_) {
-        for (double w = min_angular; w <= max_angular; w += angular_resolution_) {
+    for (double v = min_linear; v <= max_linear + 1e-6; v += linear_resolution_) {
+        for (double w = min_angular; w <= max_angular + 1e-6; w += angular_resolution_) {
             velocities.emplace_back(v, w);
         }
+    }
+
+    if (velocities.empty()) {
+        velocities.emplace_back(0.0, 0.0);
     }
 
     RCLCPP_DEBUG(this->get_logger(), "Generated %zu velocity candidates", velocities.size());
     return velocities;
 }
 
-double DWA::calculate_heading_cost(double linear, double angular, const geometry_msgs::msg::PoseStamped& robot_pose){
-    double current_yaw = tf2::getYaw(robot_pose.pose.orientation);
+double DWA::calculate_heading_cost(const Trajectory& trajectory, const geometry_msgs::msg::PoseStamped& robot_pose){
+    const double target_x = current_target_pose_->x;
+    const double target_y = current_target_pose_->y;
 
-    // Calculate direct angle to target from current position
-    double target_x = current_target_pose_->x;
-    double target_y = current_target_pose_->y;
-    double target_dx = target_x - robot_pose.pose.position.x;
-    double target_dy = target_y - robot_pose.pose.position.y;
+    const double dist_to_goal = std::hypot(target_x - trajectory.heading_position.x,
+                                          target_y - trajectory.heading_position.y);
+    const double current_dist = std::hypot(target_x - robot_pose.pose.position.x,
+                                           target_y - robot_pose.pose.position.y);
+    const double progress = current_dist - dist_to_goal;
 
-    // Direct angle to target
-    double target_angle = atan2(target_dy, target_dx);
+    const double heading_angle = std::atan2(target_y - trajectory.heading_position.y,
+                                            target_x - trajectory.heading_position.x);
+    const double angle_diff = normalize_angle(heading_angle - trajectory.heading_yaw);
 
-    // Predicted robot orientation after this command
-    double predicted_yaw = current_yaw + angular * predict_time_;
+    double cost = dist_to_goal + heading_angle_weight_ * std::abs(angle_diff);
 
-    // Angle difference between predicted heading and target direction
-    double angle_diff = normalize_angle(target_angle - predicted_yaw);
-
-    return std::abs(angle_diff);
-}
-
-double DWA::calculate_obstacle_cost(double linear, double angular, const geometry_msgs::msg::PoseStamped& robot_pose){
-
-    double min_distance = std::numeric_limits<double>::max();
-
-    // Simulate trajectory and find minimum distance to obstacles
-    double current_angle = tf2::getYaw(robot_pose.pose.orientation);
-    double current_x = robot_pose.pose.position.x;
-    double current_y = robot_pose.pose.position.y;
-
-    for (double t = 0; t <= predict_time_; t += dt_) {
-        current_angle += angular * dt_;
-        current_x += linear * cos(current_angle) * dt_;
-        current_y += linear * sin(current_angle) * dt_;
-
-        // Check distance to all valid laser points
-        for (size_t i = 0; i < current_laser_scan_->ranges.size(); ++i) {
-            double range = current_laser_scan_->ranges[i];
-
-            // Skip invalid or too-close readings
-            if (std::isnan(range) || std::isinf(range) ||
-                range < current_laser_scan_->range_min ||
-                range > current_laser_scan_->range_max ||
-                range < 0.05) { // Skip very close readings
-                continue;
-            }
-
-            // Calculate obstacle position in world coordinates
-            double angle = current_laser_scan_->angle_min + i * current_laser_scan_->angle_increment;
-            double obs_x = robot_pose.pose.position.x + range * cos(tf2::getYaw(robot_pose.pose.orientation) + angle);
-            double obs_y = robot_pose.pose.position.y + range * sin(tf2::getYaw(robot_pose.pose.orientation) + angle);
-
-            // Calculate distance from predicted robot position to obstacle
-            double distance = sqrt(pow(current_x - obs_x, 2) + pow(current_y - obs_y, 2));
-            min_distance = std::min(min_distance, distance);
-        }
+    if (progress > 0.0) {
+        cost = std::max(0.0, cost - progress);
+    } else {
+        cost += std::abs(progress);
     }
 
-    if (min_distance == std::numeric_limits<double>::max()) {
-        return 0.0; // No obstacles detected
-    }
-
-    // Return inverse cost: closer obstacles = higher cost, normalized to [0,1]
-    return std::max(0.0, 1.0 - (min_distance / 2.0));
+    return cost;
 }
 
-double DWA::calculate_velocity_cost(double linear, double angular){
-    // Prefer moderate forward velocity
-    double normalized_linear = std::abs(linear) / linear_max_vel_;
-
-    // Penalize backward motion more heavily
-    double direction_penalty = (linear > 0) ? 1.0 : 2.0;
-
-    // Penalize high angular velocities
-    double normalized_angular = std::abs(angular) / angular_max_vel_;
-
-    // Combined cost: balance forward motion preference with smooth movement
-    return direction_penalty * (1.0 - normalized_linear * 0.8) + normalized_angular * 0.5;
-}
-
-bool DWA::check_collision(double linear, double angular, const geometry_msgs::msg::PoseStamped& robot_pose){
-    // Simulate trajectory and check for collisions
-    double current_angle = tf2::getYaw(robot_pose.pose.orientation);
-    double current_x = robot_pose.pose.position.x;
-    double current_y = robot_pose.pose.position.y;
-
-    for (double t = 0; t <= predict_time_; t += dt_) {
-        current_angle += angular * dt_;
-        current_x += linear * cos(current_angle) * dt_;
-        current_y += linear * sin(current_angle) * dt_;
-
-        // Check distance to all laser scan points
-        for (size_t i = 0; i < current_laser_scan_->ranges.size(); ++i) {
-            double range = current_laser_scan_->ranges[i];
-
-            // Skip invalid readings
-            if (std::isnan(range) || std::isinf(range) ||
-                range < current_laser_scan_->range_min ||
-                range > current_laser_scan_->range_max ||
-                range < 0.05) { // Skip very close readings (5cm minimum)
-                continue;
-            }
-
-            // Calculate obstacle position
-            double angle = current_laser_scan_->angle_min + i * current_laser_scan_->angle_increment;
-            double obs_x = robot_pose.pose.position.x + range * cos(tf2::getYaw(robot_pose.pose.orientation) + angle);
-            double obs_y = robot_pose.pose.position.y + range * sin(tf2::getYaw(robot_pose.pose.orientation) + angle);
-
-            // Check if predicted robot position collides with obstacle
-            double distance = sqrt(pow(current_x - obs_x, 2) + pow(current_y - obs_y, 2));
-            if (distance < robot_radius_) {
-                return true; // Collision detected
-            }
-        }
+double DWA::calculate_obstacle_cost(const Trajectory& trajectory){
+    if (trajectory.collision) {
+        return std::numeric_limits<double>::infinity();
     }
 
-    return false; // No collision
+    if (!std::isfinite(trajectory.min_distance)) {
+        return 0.0;
+    }
+
+    const double clearance = trajectory.min_distance - robot_radius_;
+    if (clearance <= 0.0) {
+        return std::numeric_limits<double>::infinity();
+    }
+
+    return 1.0 / (clearance + obstacle_margin_);
+}
+
+double DWA::calculate_velocity_cost(double linear, double angular, const Trajectory& trajectory){
+    static_cast<void>(trajectory);
+
+    const double normalized_linear = std::clamp(std::abs(linear) / linear_max_vel_, 0.0, 1.0);
+    const double normalized_angular = std::clamp(std::abs(angular) / angular_max_vel_, 0.0, 1.0);
+
+    const double linear_limit = std::max(linear_acceleration_ * dt_, 1e-3);
+    const double angular_limit = std::max(angular_acceleration_ * dt_, 1e-3);
+
+    const double smoothness = (std::abs(linear - current_velocity_.linear.x) / linear_limit) +
+                              (std::abs(angular - current_velocity_.angular.z) / angular_limit);
+
+    double cost = (1.0 - normalized_linear) + 0.6 * normalized_angular + 0.3 * smoothness;
+
+    if (linear < 0.0) {
+        cost += 1.0;
+    }
+
+    return cost;
+}
+
+bool DWA::check_collision(const Trajectory& trajectory){
+    return trajectory.collision;
 }
 
 geometry_msgs::msg::Twist DWA::calculate_optimal_velocity(const geometry_msgs::msg::PoseStamped& robot_pose){
     auto velocities = calculate_dynamic_window(current_velocity_.linear.x, current_velocity_.angular.z);
+    auto obstacles = extract_obstacle_points(robot_pose);
 
     double best_cost = std::numeric_limits<double>::max();
     geometry_msgs::msg::Twist best_cmd;
     best_cmd.linear.x = 0.0;
     best_cmd.angular.z = 0.0;
 
-    int valid_candidates = 0;
+    size_t feasible_candidates = 0;
 
-    // If no candidates, return zero velocity
     if (velocities.empty()) {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
                              "No velocity candidates generated");
@@ -256,44 +343,61 @@ geometry_msgs::msg::Twist DWA::calculate_optimal_velocity(const geometry_msgs::m
     }
 
     for (const auto& vel : velocities) {
-        double linear = vel.first;
-        double angular = vel.second;
+        const double linear = vel.first;
+        const double angular = vel.second;
 
-        // Skip if collision detected
-        if (check_collision(linear, angular, robot_pose)) {
+        const double abs_angular = std::abs(angular);
+        // Enforce the minimum forward motion needed for the non-holonomic drivetrain
+        if (abs_angular > 1e-6) {
+            if (std::abs(linear) < min_linear_vel_for_turn_) {
+                continue;
+            }
+            const double max_allowed_angular = std::abs(linear) / std::max(min_turning_radius_, 1e-3);
+            if (abs_angular > max_allowed_angular) {
+                continue;
+            }
+        }
+
+        auto trajectory = simulate_trajectory(linear, angular, robot_pose, obstacles);
+        if (check_collision(trajectory)) {
             continue;
         }
 
-        valid_candidates++;
+        double obstacle_cost = calculate_obstacle_cost(trajectory);
+        if (!std::isfinite(obstacle_cost)) {
+            continue;
+        }
 
-        // Calculate costs
-        double heading_cost = calculate_heading_cost(linear, angular, robot_pose);
-        double obstacle_cost = calculate_obstacle_cost(linear, angular, robot_pose);
-        double velocity_cost = calculate_velocity_cost(linear, angular);
+        double heading_cost = calculate_heading_cost(trajectory, robot_pose);
+        double velocity_cost = calculate_velocity_cost(linear, angular, trajectory);
 
-        // Total cost calculation
-        double total_cost = heading_gain_ * heading_cost +
-                           obstacle_gain_ * obstacle_cost +
-                           velocity_gain_ * velocity_cost;
+        const double total_cost = heading_gain_ * heading_cost +
+                                  obstacle_gain_ * obstacle_cost +
+                                  velocity_gain_ * velocity_cost;
 
-        // Update best velocity if this is better
         if (total_cost < best_cost) {
             best_cost = total_cost;
             best_cmd.linear.x = linear;
             best_cmd.angular.z = angular;
         }
+
+        feasible_candidates++;
     }
 
-    // Log summary information
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
-                         "DWA: %d/%zu valid candidates, selected v=%.2f w=%.2f (cost=%.3f)",
-                         valid_candidates, velocities.size(),
-                         best_cmd.linear.x, best_cmd.angular.z, best_cost);
-
-    // Safety check
-    if (best_cost == std::numeric_limits<double>::max()) {
+    const size_t total_samples = velocities.size();
+    if (feasible_candidates > 0) {
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 3000,
+                             "DWA: %zu/%zu feasible candidates, selected v=%.2f w=%.2f (cost=%.3f)",
+                             feasible_candidates, total_samples,
+                             best_cmd.linear.x, best_cmd.angular.z, best_cost);
+    } else {
         RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-                             "All velocity candidates rejected due to collisions");
+                             "All velocity candidates rejected by kinematic or collision checks");
+    }
+
+    if (best_cost == std::numeric_limits<double>::max()) {
+        best_cmd.linear.x = 0.0;
+        best_cmd.angular.z = 0.0;
     }
 
     return best_cmd;
