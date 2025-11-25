@@ -46,6 +46,7 @@ private:
   const double tread;
   const double linear_max_vel;
   const double angular_max_vel;
+  const double angular_gain;
   const std::string serial_port;
   const int pole_pairs;
 

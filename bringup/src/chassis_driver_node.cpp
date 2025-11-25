@@ -17,6 +17,7 @@ wheel_radius(get_parameter("wheel_radius").as_double()),
 tread(get_parameter("tread").as_double()),
 linear_max_vel(get_parameter("linear_max_vel").as_double()),
 angular_max_vel(dtor(get_parameter("angular_max_vel").as_double())),
+angular_gain(get_parameter("angular_gain").as_double()),
 serial_port(get_parameter("serial_port").as_string()),
 pole_pairs(get_parameter("pole_pairs").as_int())
 {
@@ -72,7 +73,7 @@ void ChassisDriver::_subscriber_callback_joy_vel(const geometry_msgs::msg::Twist
 
 void ChassisDriver::calculate_chassis(const geometry_msgs::msg::Twist::SharedPtr vel){
     const double linear_vel = constrain(vel->linear.x, -linear_max_vel, linear_max_vel);
-    const double angular_vel = constrain(vel->angular.z, -angular_max_vel, angular_max_vel);
+    const double angular_vel = constrain(vel->angular.z * angular_gain, -angular_max_vel, angular_max_vel);
 
     const double left_vel = (-tread*angular_vel + 2.0*linear_vel) / (2.0*wheel_radius);
     const double right_vel = (tread*angular_vel + 2.0*linear_vel) / (2.0*wheel_radius);

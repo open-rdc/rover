@@ -1,8 +1,9 @@
 # 共通パラメータ（複数のノードから読むため）
 chassis_driver_node:
   ros__parameters:
-    linear_max_vel: 1.0
-    angular_max_vel: 90.0
+    linear_max_vel: 1.0 # [m/s]
+    angular_max_vel: 90.0 # [deg/s]
+    angular_gain: 4.0 # ゲインをかけないと旋回が遅いため
     serial_port: "/dev/ttyCNT"
     wheel_radius : 0.1125
     tread : 0.25
@@ -19,6 +20,6 @@ teleop_twist_joy_node:
     axis_angular:
       yaw: 2  # ボタンの割り当て
     scale_angular:
-      yaw: 1.5
+      yaw: 0.5
 
     enable_button: 6
