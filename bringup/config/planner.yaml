@@ -1,7 +1,7 @@
 global_planner_node:
   ros__parameters:
     mode: 'pp'  # 'wr(waypoint_recorder)' or 'pp(path_planner)'
-    waypoint_file: '251114_1.csv'
+    waypoint_file: '251124_5_yoko.csv'
     joy_button_index: 0
     waypoint_threshold: 1.0
 
@@ -39,5 +39,5 @@ dwa_node:
     min_linear_vel_for_turn: 0.05  # Smallest linear speed that allows turning [m/s]
     goal_tolerance: 0.7           # Distance threshold to stop at goal [m]
     heading_angle_weight: 0.6      # Weight for heading alignment inside heading cost
-    obstacle_margin: 0.3          # Extra safety margin around the robot [m]
-    obstacle_predict_time: 5.0     # Longer horizon used only for obstacle clearance [s]
+    obstacle_margin: 0.0          # Extra safety margin around the robot [m]
+    obstacle_predict_time: 3.0     # Longer horizon used only for obstacle clearance [s]
