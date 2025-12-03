@@ -107,6 +107,11 @@ class NmeaTcpDriverNode(Node):
             if not quality or quality == '0':
                 return
 
+            # RTK以外は今回の試験では使用しない
+            if quality not in ['4']:
+                self.get_logger().info(f'Skip GGA with quality {quality}')
+                return
+
             # 緯度の解析
             lat_str = parts[2]
             lat_dir = parts[3]
@@ -167,18 +172,19 @@ class NmeaTcpDriverNode(Node):
             navsatfix_msg.latitude = latitude
             navsatfix_msg.longitude = longitude
             navsatfix_msg.altitude = altitude
-            navsatfix_msg.position_covariance_type = NavSatFix.COVARIANCE_TYPE_APPROXIMATED
+            # navsatfix_msg.position_covariance_type = NavSatFix.COVARIANCE_TYPE_APPROXIMATED
+            navsatfix_msg.position_covariance_type = NavSatFix.COVARIANCE_TYPE_DIAGONAL_KNOWN
 
             # HDOPとGPS品質に基づいて位置共分散を設定
             # 基準誤差をGPS品質に応じて調整
             if quality == '4':  # RTK Fixed
-                base_error = 0.1  # 10cm
+                base_error = 0.01  # 1cm
             elif quality == '5':  # RTK Float
-                base_error = 1.0  # 1m
+                base_error = 0.5  # 50cm
             elif quality == '2':  # DGPS
-                base_error = 2.0  # 2m
-            elif quality == '1':  # GPS
                 base_error = 3.0  # 3m
+            elif quality == '1':  # GPS
+                base_error = 5.0  # 5m
             else:  # その他
                 base_error = 10.0  # 10m（精度不明時は保守的に）
 
@@ -186,19 +192,19 @@ class NmeaTcpDriverNode(Node):
             horizontal_variance = (hdop * base_error) ** 2
             vertical_variance = horizontal_variance * 4  # 高度は水平位置より精度が低い
 
-            # # HDOPが大きすぎる場合（>5.0）は信頼度を大幅に下げる
-            # if hdop > 5.0:
-            #     horizontal_variance *= 4  # さらに4倍
-            #     vertical_variance *= 4
-            # elif hdop > 2.0:
-            #     horizontal_variance *= 2  # 2倍
-            #     vertical_variance *= 2
+            # HDOPが大きすぎる場合（>5.0）は信頼度を大幅に下げる
+            if hdop > 5.0:
+                horizontal_variance *= 4  # さらに4倍
+                vertical_variance *= 4
+            elif hdop > 2.0:
+                horizontal_variance *= 2  # 2倍
+                vertical_variance *= 2
 
-            # navsatfix_msg.position_covariance = [
-            #     horizontal_variance, 0.0, 0.0,
-            #     0.0, horizontal_variance, 0.0,
-            #     0.0, 0.0, vertical_variance
-            # ]
+            navsatfix_msg.position_covariance = [
+                horizontal_variance, 0.0, 0.0,
+                0.0, horizontal_variance, 0.0,
+                0.0, 0.0, vertical_variance
+            ]
 
             self.navsatfix_pub.publish(navsatfix_msg)
 
