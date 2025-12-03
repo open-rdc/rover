@@ -8,9 +8,10 @@ navsat_transform_node:
     frequency: 50.0
     magnetic_declination_radians: 0.0
       #yaw_offset: -1.5707963
-    yaw_offset: 2.8  # mae
+      # yaw_offset: 2.8  # mae
       #yaw_offset: 1.229
       #yaw_offset: -0.34
+    yaw_offset: -0.11 #tuku mae
     zero_altitude: true
     broadcast_cartesian_transform: true
     publish_filtered_gps: true
