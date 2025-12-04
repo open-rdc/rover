@@ -110,6 +110,8 @@ class GlobalPlannerNode(Node):
 
         # パスプランナーの状態変数
         self.planner_started = False
+        self.awaiting_stop_ack = False
+        self.last_published_waypoint = None
 
         self.load_waypoints()
         self.timer = self.create_timer(0.1, self.planner_callback)  # 10Hz
@@ -137,13 +139,19 @@ class GlobalPlannerNode(Node):
 
         # ボタンが押された瞬間を検出（立ち上がりエッジ）
         if current_button_state == 1 and self.previous_joy_button_state == 0:
-            if not self.planner_started:
+            if self.awaiting_stop_ack:
+                self.awaiting_stop_ack = False
+                self.planner_started = True
+                self.get_logger().info("Resuming after STOP marker")
+            elif not self.planner_started:
                 self.planner_started = True
                 self.get_logger().info("Path following started!")
             else:
                 # 既に開始している場合は停止
                 self.planner_started = False
+                self.awaiting_stop_ack = False
                 self.current_waypoint_index = 0  # リセット
+                self.last_published_waypoint = None
                 self.get_logger().info("Path following stopped and reset!")
 
         self.previous_joy_button_state = current_button_state
@@ -193,15 +201,43 @@ class GlobalPlannerNode(Node):
         self.waypoints = []
         try:
             with open(self.waypoint_file, 'r') as csvfile:
-                reader = csv.DictReader(csvfile)
-                for row in reader:
-                    waypoint = {
-                        'x': float(row['x']),
-                        'y': float(row['y'])
-                    }
-                    self.waypoints.append(waypoint)
+                reader = csv.reader(csvfile)
+                for row_number, row in enumerate(reader, start=1):
+                    if not row:
+                        continue
 
-            self.get_logger().info(f"Loaded {len(self.waypoints)} waypoints from {self.waypoint_file}")
+                    first_cell = row[0].strip()
+
+                    # ヘッダー行をスキップ
+                    if first_cell.lower() == 'x':
+                        continue
+
+                    if first_cell.upper() == 'STOP':
+                        self.waypoints.append({'type': 'stop'})
+                        continue
+
+                    if len(row) < 2 or row[1].strip() == '':
+                        self.get_logger().warn(
+                            f"Skipping row {row_number}: insufficient waypoint data {row}"
+                        )
+                        continue
+
+                    try:
+                        x = float(first_cell)
+                        y = float(row[1].strip())
+                    except ValueError:
+                        self.get_logger().warn(
+                            f"Skipping row {row_number}: unable to parse waypoint {row}"
+                        )
+                        continue
+
+                    self.waypoints.append({'type': 'waypoint', 'x': x, 'y': y})
+
+            waypoint_count = sum(1 for wp in self.waypoints if wp['type'] == 'waypoint')
+            stop_count = sum(1 for wp in self.waypoints if wp['type'] == 'stop')
+            self.get_logger().info(
+                f"Loaded {waypoint_count} waypoints and {stop_count} STOP markers from {self.waypoint_file}"
+            )
 
         except Exception as e:
             self.get_logger().error(f"Failed to load waypoints: {e}")
@@ -217,9 +253,8 @@ class GlobalPlannerNode(Node):
 
         if self.current_waypoint_index >= len(self.waypoints):
             # 最後のウェイポイントに到達したら、最後のウェイポイントを継続してパブリッシュ
-            if len(self.waypoints) > 0:
-                last_waypoint = self.waypoints[-1]
-                self.publish_target_pose(last_waypoint)
+            if self.last_published_waypoint:
+                self.publish_target_pose(self.last_published_waypoint)
                 self.get_logger().info("All waypoints reached. Holding at last waypoint.")
             return
 
@@ -233,7 +268,19 @@ class GlobalPlannerNode(Node):
             current_y = transform.transform.translation.y
 
             # 現在のターゲットウェイポイント
-            target_waypoint = self.waypoints[self.current_waypoint_index]
+            target_entry = self.waypoints[self.current_waypoint_index]
+
+            if target_entry['type'] == 'stop':
+                if not self.awaiting_stop_ack:
+                    self.awaiting_stop_ack = True
+                    self.planner_started = False
+                    self.get_logger().info(
+                        f"Encountered STOP marker at index {self.current_waypoint_index + 1}. Waiting for joystick input."
+                    )
+                self.current_waypoint_index += 1
+                return
+
+            target_waypoint = target_entry
 
             # ターゲットポーズをパブリッシュ
             self.publish_target_pose(target_waypoint)
@@ -277,6 +324,7 @@ class GlobalPlannerNode(Node):
 
         # パブリッシュ
         self.target_pose_publisher.publish(target_pose_msg)
+        self.last_published_waypoint = {'x': target_pose_msg.x, 'y': target_pose_msg.y}
 
 def main(args=None):
     rclpy.init(args=args)
