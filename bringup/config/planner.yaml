@@ -32,10 +32,10 @@ dwa_node:
     # Cost function weights
     heading_gain: 3.0       # Weight for heading cost
     obstacle_gain: 2.0       # Weight for obstacle cost
-    velocity_gain: 1.0       # Weight for velocity cost (increased for stability)
+    velocity_gain: 2.0       # Weight for velocity cost (increased for stability)
 
     # Non-holonomic and tuning parameters
-    min_turning_radius: 2.0       # Minimum turning radius [m]
+    min_turning_radius: 3.0       # Minimum turning radius [m]
     min_linear_vel_for_turn: 0.1  # Smallest linear speed that allows turning [m/s]
     goal_tolerance: 1.0           # Distance threshold to stop at goal [m]
     heading_angle_weight: 1.0      # Weight for heading alignment inside heading cost
