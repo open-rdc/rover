@@ -14,8 +14,8 @@ dwa_node:
     robot_radius: 0.01       # Robot radius for collision checking [m]
 
     # Cost function weights
-    heading_gain: 2.0       # Weight for heading cost
-    obstacle_gain: 1.0       # Weight for obstacle cost
+    heading_gain: 3.0       # Weight for heading cost
+    obstacle_gain: 2.0       # Weight for obstacle cost
     velocity_gain: 1.0       # Weight for velocity cost (increased for stability)
 
     # Non-holonomic and tuning parameters

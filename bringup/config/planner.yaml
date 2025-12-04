@@ -1,7 +1,7 @@
 global_planner_node:
   ros__parameters:
     mode: 'pp'  # 'wr(waypoint_recorder)' or 'pp(path_planner)'
-    waypoint_file: '251204_1.csv'
+    waypoint_file: '251204_2.csv'
     joy_button_index: 0
     waypoint_threshold: 1.5
 
@@ -22,7 +22,7 @@ dwa_node:
     control_frequency: 20.0  # Control loop frequency [Hz]
 
     # DWA algorithm parameters
-    predict_time: 0.5        # Prediction time horizon [s] (reduced for stability)
+    predict_time: 1.0        # Prediction time horizon [s] (reduced for stability)
     linear_acceleration: 2.0  # Maximum linear acceleration [m/s^2] (increased)
     angular_acceleration: 50.0 # Maximum angular acceleration [deg/s^2] (increased)
     linear_resolution: 0.02  # Linear velocity resolution [m/s]
@@ -31,7 +31,7 @@ dwa_node:
 
     # Cost function weights
     heading_gain: 3.0       # Weight for heading cost
-    obstacle_gain: 1.0       # Weight for obstacle cost
+    obstacle_gain: 2.0       # Weight for obstacle cost
     velocity_gain: 1.0       # Weight for velocity cost (increased for stability)
 
     # Non-holonomic and tuning parameters
