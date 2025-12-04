@@ -107,7 +107,7 @@ class NmeaTcpDriverNode(Node):
             if not quality or quality == '0':
                 return
 
-            # RTK以外は今回の試験では使用しない
+            # RTK以外は使用しない
             if quality not in ['4']:
                 self.get_logger().info(f'Skip GGA with quality {quality}')
                 return
